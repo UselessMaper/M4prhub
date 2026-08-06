@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "M4pr Hub",
+    Name = "M4pr Hub v1.3",
     LoadingTitle = "Thanks for using! :3",
     LoadingSubtitle = "by Useless Maper"
 })
