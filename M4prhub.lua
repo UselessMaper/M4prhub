@@ -5,132 +5,6 @@ local Window = Rayfield:CreateWindow({
     LoadingTitle = "Thanks for using! :3",
     LoadingSubtitle = "by Useless Maper"
 })
-local ChanceTab = Window:CreateTab("Chance", "target") -- Tab name, icon ID
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-
-local AutoAim = false
-local AimConnection
-
-local function getCharacter()
-    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    return Character
-end
-
-local function getNearestKiller()
-    local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
-
-    local char = getCharacter()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-
-    local nearest
-    local shortest = math.huge
-
-    for _, model in ipairs(killersFolder:GetChildren()) do
-        if model:IsA("Model") then
-            local root = model:FindFirstChild("HumanoidRootPart")
-            if root then
-                local dist = (root.Position - hrp.Position).Magnitude
-                if dist < shortest then
-                    shortest = dist
-                    nearest = model
-                end
-            end
-        end
-    end
-
-    return nearest
-end
-
-local function aimAtPrediction()
-    local char = getCharacter()
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local killer = getNearestKiller()
-    if not killer then return end
-
-    local root = killer:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    local start = tick()
-
-    local conn
-    conn = RunService.RenderStepped:Connect(function()
-        if tick() - start >= 1.9 then
-            conn:Disconnect()
-            return
-        end
-
-        local velocity = root.AssemblyLinearVelocity
-        local targetPos
-
-        -- Predict 4 studs ahead if moving
-        if velocity.Magnitude > 0.1 then
-            targetPos = root.Position + velocity.Unit * 4
-        else
-            -- Otherwise aim directly at the killer
-            targetPos = root.Position
-        end
-
-        local flatTarget = Vector3.new(
-    targetPos.X,
-    hrp.Position.Y,
-    targetPos.Z
-)
-
-hrp.CFrame = CFrame.lookAt(hrp.Position, flatTarget)
-    end)
-end
-
-local ShootConnection
-
-ChanceTab:CreateToggle({
-    Name = "Auto Aim",
-    CurrentValue = false,
-    Flag = "AutoAimToggle",
-    Callback = function(Value)
-        AutoAim = Value
-
-        if ShootConnection then
-            ShootConnection:Disconnect()
-            ShootConnection = nil
-        end
-
-        if AutoAim then
-            print("Auto Aim Enabled")
-
-            task.spawn(function()
-                while AutoAim do
-                    local shootButton
-
-                    for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if v:IsA("ImageButton") and v.Name == "Shoot" then
-                            shootButton = v
-                            break
-                        end
-                    end
-
-                    if shootButton then
-                        ShootConnection = shootButton.MouseButton1Click:Connect(function()
-                            if AutoAim then
-                                aimAtPrediction()
-                            end
-                        end)
-                        break
-                    end
-
-                    task.wait(0.5)
-                end
-            end)
-        else
-            print("Auto Aim Disabled")
-        end
-    end,
-})
 local ChanceV2 = Window:CreateTab("Chance v2", "crosshair")
 local Players = game:GetService("Players")
 
@@ -257,3 +131,168 @@ ChanceV2:CreateInput({
     end,
 })
 ChanceV2:CreateLabel("Should be 4 studs")
+local TwoTimeTab = Window:CreateTab("two time", "Sword")
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local BackstabEnabled = false
+local BackstabStuds = 2
+local DaggerConnection
+
+local RunService = game:GetService("RunService")
+
+local function ConnectDaggerButton(button)
+    if DaggerConnection then
+        DaggerConnection:Disconnect()
+    end
+
+    DaggerConnection = button.MouseButton1Click:Connect(function()
+        if not BackstabEnabled then
+            return
+        end
+
+        local character = LocalPlayer.Character
+        if not character then
+            return
+        end
+
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if not hrp then
+            return
+        end
+
+        local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
+
+        -- Find the first killer model
+        local killer
+        for _, model in ipairs(killersFolder:GetChildren()) do
+            if model:IsA("Model") then
+                killer = model
+                break
+            end
+        end
+
+        if not killer then
+            return
+        end
+
+        local killerRoot = killer:FindFirstChild("HumanoidRootPart") or killer.PrimaryPart
+        if not killerRoot then
+            return
+        end
+
+        local startTime = tick()
+
+        local connection
+        connection = RunService.RenderStepped:Connect(function()
+            if tick() - startTime >= 0.8 then
+                connection:Disconnect()
+                return
+            end
+
+            if not hrp.Parent or not killerRoot.Parent then
+                connection:Disconnect()
+                return
+            end
+
+            -- Stay 2 studs behind the killer
+            local behindPos = killerRoot.Position - killerRoot.CFrame.LookVector * BackstabStuds
+
+            hrp.CFrame = CFrame.lookAt(behindPos, killerRoot.Position)
+        end)
+    end)
+end
+
+local function SearchForDagger()
+    local button = LocalPlayer.PlayerGui:FindFirstChild("Dagger", true)
+    if button and button:IsA("ImageButton") then
+        ConnectDaggerButton(button)
+    end
+end
+
+SearchForDagger()
+
+LocalPlayer.PlayerGui.DescendantAdded:Connect(function(obj)
+    if obj:IsA("ImageButton") and obj.Name == "Dagger" then
+        ConnectDaggerButton(obj)
+    end
+end)
+
+TwoTimeTab:CreateToggle({
+    Name = "Backstab",
+    CurrentValue = false,
+    Flag = "BackstabToggle",
+    Callback = function(Value)
+        BackstabEnabled = Value
+    end,
+})
+TwoTimeTab:CreateSlider({
+    Name = "Studs",
+    Range = {0, 5},
+    Increment = 1,
+    Suffix = "",
+    CurrentValue = 2,
+    Flag = "BackstabStuds",
+    Callback = function(Value)
+        BackstabStuds = Value
+    end,
+})
+local ESPTab = Window:CreateTab("ESP", "eye")
+local KillerESPEnabled = false
+local KillerHighlight
+
+local function UpdateKillerESP()
+    if KillerHighlight then
+        KillerHighlight:Destroy()
+        KillerHighlight = nil
+    end
+
+    if not KillerESPEnabled then
+        return
+    end
+
+    local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
+
+    local function ApplyHighlight()
+        if KillerHighlight then
+            KillerHighlight:Destroy()
+            KillerHighlight = nil
+        end
+
+        for _, killer in ipairs(killersFolder:GetChildren()) do
+            if killer:IsA("Model") then
+                local highlight = Instance.new("Highlight")
+                highlight.Name = "KillerESP"
+                highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                highlight.FillTransparency = 0.5
+                highlight.OutlineTransparency = 0
+                highlight.Adornee = killer
+                highlight.Parent = killer
+
+                KillerHighlight = highlight
+                break
+            end
+        end
+    end
+
+    ApplyHighlight()
+
+    killersFolder.ChildAdded:Connect(function()
+        if KillerESPEnabled then
+            task.wait()
+            ApplyHighlight()
+        end
+    end)
+end
+
+ESPTab:CreateToggle({
+    Name = "Killer",
+    CurrentValue = false,
+    Flag = "KillerESP",
+    Callback = function(Value)
+        KillerESPEnabled = Value
+        UpdateKillerESP()
+    end,
+})
