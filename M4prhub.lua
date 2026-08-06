@@ -131,7 +131,7 @@ ChanceTab:CreateToggle({
         end
     end,
 })
-local Chancev2 = Window:CreateTab("Chance v2", "crosshair")
+local ChanceV2 = Window:CreateTab("Chance v2", "crosshair")
 local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
@@ -139,6 +139,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 local AimV2Enabled = false
 local ShootConnection
+local PredictionStuds = 4
 
 local function ConnectShootButton(button)
     if ShootConnection then
@@ -199,7 +200,7 @@ connection = RunService.RenderStepped:Connect(function()
     end
 
     -- Point 4 studs in front of the model
-    local frontPosition = killerRoot.Position + killerRoot.CFrame.LookVector * 4
+    local frontPosition = killerRoot.Position + killerRoot.CFrame.LookVector * PredictionStuds
     frontPosition = Vector3.new(
         frontPosition.X,
         root.Position.Y,
@@ -235,7 +236,7 @@ player.CharacterAdded:Connect(function()
     SearchForShoot()
 end)
 
-Chancev2:CreateToggle({
+ChanceV2:CreateToggle({
     Name = "Aim v2",
     CurrentValue = false,
     Flag = "AimV2",
@@ -243,3 +244,16 @@ Chancev2:CreateToggle({
         AimV2Enabled = Value
     end,
 })
+ChanceV2:CreateInput({
+    Name = "Prediction",
+    PlaceholderText = "4",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local num = tonumber(Text)
+
+        if num then
+            PredictionStuds = num
+        end
+    end,
+})
+ChanceV2:CreateLabel("Should be 4 studs")
