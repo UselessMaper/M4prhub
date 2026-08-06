@@ -5,7 +5,7 @@ local Window = Rayfield:CreateWindow({
     LoadingTitle = "Thanks for using! :3",
     LoadingSubtitle = "by Useless Maper"
 })
-local ChanceTab = Window:CreateTab("Chance", 4483362458) -- Tab name, icon ID
+local ChanceTab = Window:CreateTab("Chance", "target") -- Tab name, icon ID
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -70,7 +70,7 @@ local function aimAtPrediction()
 
         -- Predict 4 studs ahead if moving
         if velocity.Magnitude > 0.1 then
-            targetPos = root.Position + velocity.Unit * 3
+            targetPos = root.Position + velocity.Unit * 4
         else
             -- Otherwise aim directly at the killer
             targetPos = root.Position
@@ -86,6 +86,8 @@ hrp.CFrame = CFrame.lookAt(hrp.Position, flatTarget)
     end)
 end
 
+local ShootConnection
+
 ChanceTab:CreateToggle({
     Name = "Auto Aim",
     CurrentValue = false,
@@ -93,34 +95,151 @@ ChanceTab:CreateToggle({
     Callback = function(Value)
         AutoAim = Value
 
-        if AimConnection then
-            AimConnection:Disconnect()
-            AimConnection = nil
+        if ShootConnection then
+            ShootConnection:Disconnect()
+            ShootConnection = nil
         end
 
         if AutoAim then
             print("Auto Aim Enabled")
 
-            -- Find the Shoot ImageButton anywhere in PlayerGui
-            local shootButton
-            for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                if v:IsA("ImageButton") and v.Name == "Shoot" then
-                    shootButton = v
-                    break
-                end
-            end
+            task.spawn(function()
+                while AutoAim do
+                    local shootButton
 
-            if shootButton then
-                AimConnection = shootButton.MouseButton1Click:Connect(function()
-                    if AutoAim then
-                        aimAtPrediction()
+                    for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if v:IsA("ImageButton") and v.Name == "Shoot" then
+                            shootButton = v
+                            break
+                        end
                     end
-                end)
-            else
-                warn("Shoot ImageButton not found!")
-            end
+
+                    if shootButton then
+                        ShootConnection = shootButton.MouseButton1Click:Connect(function()
+                            if AutoAim then
+                                aimAtPrediction()
+                            end
+                        end)
+                        break
+                    end
+
+                    task.wait(0.5)
+                end
+            end)
         else
             print("Auto Aim Disabled")
         end
+    end,
+})
+local Chancev2 = Window:CreateTab("Chance v2", "crosshair")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local AimV2Enabled = false
+local ShootConnection
+
+local function ConnectShootButton(button)
+    if ShootConnection then
+        ShootConnection:Disconnect()
+        ShootConnection = nil
+    end
+
+    ShootConnection = button.MouseButton1Click:Connect(function()
+        if not AimV2Enabled then
+            return
+        end
+
+        local character = player.Character
+        if not character then
+            return
+        end
+
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if not root then
+            return
+        end
+
+        local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
+
+        -- Find the first killer model
+        local killer
+        for _, v in ipairs(killersFolder:GetChildren()) do
+            if v:IsA("Model") then
+                killer = v
+                break
+            end
+        end
+
+        if not killer then
+            return
+        end
+
+        local killerRoot = killer:FindFirstChild("HumanoidRootPart") or killer.PrimaryPart
+        if not killerRoot then
+            return
+        end
+
+        -- Look at a point 4 studs in front of the killer
+        local RunService = game:GetService("RunService")
+
+local startTime = tick()
+local connection
+
+connection = RunService.RenderStepped:Connect(function()
+    if tick() - startTime >= 2 then
+        connection:Disconnect()
+        return
+    end
+
+    if not root.Parent or not killerRoot.Parent then
+        connection:Disconnect()
+        return
+    end
+
+    -- Point 4 studs in front of the model
+    local frontPosition = killerRoot.Position + killerRoot.CFrame.LookVector * 4
+    frontPosition = Vector3.new(
+        frontPosition.X,
+        root.Position.Y,
+        frontPosition.Z
+    )
+
+    -- Face that point
+    root.CFrame = CFrame.lookAt(root.Position, frontPosition)
+end)
+    end)
+end
+
+local function SearchForShoot()
+    local button = playerGui:FindFirstChild("Shoot", true)
+    if button and button:IsA("ImageButton") then
+        ConnectShootButton(button)
+    end
+end
+
+-- Initial search
+SearchForShoot()
+
+-- Reconnect if the Shoot button is recreated
+playerGui.DescendantAdded:Connect(function(obj)
+    if obj:IsA("ImageButton") and obj.Name == "Shoot" then
+        ConnectShootButton(obj)
+    end
+end)
+
+-- Search again after respawning
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    SearchForShoot()
+end)
+
+Chancev2:CreateToggle({
+    Name = "Aim v2",
+    CurrentValue = false,
+    Flag = "AimV2",
+    Callback = function(Value)
+        AimV2Enabled = Value
     end,
 })
