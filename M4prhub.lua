@@ -376,7 +376,7 @@ TwoTimeTab:CreateSlider({
     end,
 })
 
-TwoTimeTab:CreateLabel("You should use 2-3 studs")
+TwoTimeTab:CreateLabel("it's better 2-4 studs for backstab and dashstab")
 
 -- =========================
 -- DASHSTAB TOGGLE
