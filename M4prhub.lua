@@ -141,7 +141,7 @@ local BackstabEnabled = false
 local BackstabStuds = 2
 
 local DashstabEnabled = false
-local DashstabStuds = 2
+local DashstabStuds = 3
 local DashstabDelay = 0
 local DashstabDuration = 1
 local TweenTime = 0.3
@@ -425,7 +425,7 @@ TwoTimeTab:CreateSlider({
     Range = {0, 5},
     Increment = 1,
     Suffix = "studs",
-    CurrentValue = 2,
+    CurrentValue = 3,
     Flag = "DashstabStuds",
 
     Callback = function(Value)
