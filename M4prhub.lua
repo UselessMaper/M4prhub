@@ -131,6 +131,7 @@ ChanceV2:CreateInput({
     end,
 })
 ChanceV2:CreateLabel("Should be 4 studs")
+ChanceV2:CreateLabel("REMEMBER: WHEN AIMING, STAND STILL")
 local TwoTimeTab = Window:CreateTab("Two Time", "Sword")
 
 local Players = game:GetService("Players")
@@ -143,7 +144,7 @@ local DashstabEnabled = false
 local DashstabStuds = 2
 local DashstabDelay = 0
 local DashstabDuration = 1
-local DashstabLerpSpeed = 0.25
+local DashstabLerpSpeed = 0.1
 
 local DaggerConnection
 local DashstabConnection
@@ -392,7 +393,7 @@ TwoTimeTab:CreateSlider({
     Range = {0, 1},
     Increment = 0.05,
     Suffix = "",
-    CurrentValue = 0.25,
+    CurrentValue = 0.1,
     Flag = "DashstabLerpSpeed",
 
     Callback = function(Value)
