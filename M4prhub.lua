@@ -144,7 +144,7 @@ local DashstabEnabled = false
 local DashstabStuds = 2
 local DashstabDelay = 0
 local DashstabDuration = 1
-local DashstabLerpSpeed = 0.25
+local TweenTime = 0.3
 
 local DaggerConnection
 local DashstabConnection
@@ -212,15 +212,16 @@ local function ConnectDaggerButton(button)
                 return
             end
 
-            -- Follow behind the killer for 0.7 seconds
-            local startTime = tick()
+-- Start position when Dagger is clicked
+local startPosition = hrp.Position
+local startTime = tick()
 
-            if DashstabConnection then
-                DashstabConnection:Disconnect()
-                DashstabConnection = nil
-            end
+if DashstabConnection then
+    DashstabConnection:Disconnect()
+    DashstabConnection = nil
+end
 
-            DashstabConnection = RunService.RenderStepped:Connect(function()
+DashstabConnection = RunService.RenderStepped:Connect(function()
 
     if not DashstabEnabled
         or tick() - startTime >= DashstabDuration
@@ -232,27 +233,26 @@ local function ConnectDaggerButton(button)
         return
     end
 
-    -- 3 studs behind the killer
+    -- Target position behind the killer
     local behindPos =
         killerRoot.Position
         - killerRoot.CFrame.LookVector * DashstabStuds
 
-    -- Target position and rotation
-    local targetCFrame = CFrame.lookAt(
-        behindPos,
-        killerRoot.Position
+    -- Linear movement toward the target
+    local alpha = math.clamp(
+        (tick() - startTime) / TweenTime,
+        0,
+        1
     )
 
-    -- Smoothly move toward the target
-    local currentPosition = hrp.Position:Lerp(
-    behindPos,
-    DashstabLerpSpeed
-)
+    local currentPosition =
+        startPosition:Lerp(behindPos, alpha)
 
-hrp.CFrame = CFrame.lookAt(
-    currentPosition,
-    killerRoot.Position
-)
+    -- Move while continuously looking at the killer
+    hrp.CFrame = CFrame.lookAt(
+        currentPosition,
+        killerRoot.Position
+    )
 end)
 
 return
@@ -399,13 +399,13 @@ DashstabToggle = TwoTimeTab:CreateToggle({
 TwoTimeTab:CreateSlider({
     Name = "Dashstab Speed",
     Range = {0, 1},
-    Increment = 0.05,
-    Suffix = "",
-    CurrentValue = 0.25,
-    Flag = "DashstabLerpSpeed",
+    Increment = 0.1,
+    Suffix = "s",
+    CurrentValue = 0.3,
+    Flag = "DashstabSpeed",
 
     Callback = function(Value)
-        DashstabLerpSpeed = Value
+        TweenTime = Value
     end,
 })
 TwoTimeTab:CreateSlider({
@@ -432,6 +432,7 @@ TwoTimeTab:CreateSlider({
         DashstabStuds = Value
     end,
 })
+TwoTimeTab:CreateLabel("Dashstab Speed: lower means faster")
 TwoTimeTab:CreateLabel("Distance is how many studs behind killers")
 local ESPTab = Window:CreateTab("ESP", "eye")
 local KillerESPEnabled = false
