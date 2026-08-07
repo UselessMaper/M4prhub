@@ -132,7 +132,7 @@ ChanceV2:CreateInput({
 })
 ChanceV2:CreateLabel("Should be 4 studs")
 ChanceV2:CreateLabel("REMEMBER: WHEN AIMING, STAND STILL")
-local TwoTimeTab = Window:CreateTab("Two Time", "Sword")
+local TwoTimeTab = Window:CreateTab("Two Time", "pocket-knife")
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -141,8 +141,8 @@ local BackstabEnabled = false
 local BackstabStuds = 2
 
 local DashstabEnabled = false
-local DashstabStuds = 3
-local DashstabDelay = 0.25
+local DashstabStuds = 2
+local DashstabDelay = 0
 local DashstabDuration = 1
 local DashstabLerpSpeed = 0.25
 
@@ -244,7 +244,15 @@ local function ConnectDaggerButton(button)
     )
 
     -- Smoothly move toward the target
-    hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, DashstabLerpSpeed)
+    local currentPosition = hrp.Position:Lerp(
+    behindPos,
+    DashstabLerpSpeed
+)
+
+hrp.CFrame = CFrame.lookAt(
+    currentPosition,
+    killerRoot.Position
+)
 end)
 
 return
@@ -417,23 +425,11 @@ TwoTimeTab:CreateSlider({
     Range = {0, 5},
     Increment = 1,
     Suffix = "studs",
-    CurrentValue = 3,
+    CurrentValue = 2,
     Flag = "DashstabStuds",
 
     Callback = function(Value)
         DashstabStuds = Value
-    end,
-})
-TwoTimeTab:CreateSlider({
-    Name = "Dashstab Delay",
-    Range = {0, 1},
-    Increment = 0.05,
-    Suffix = "s",
-    CurrentValue = 0.25,
-    Flag = "DashstabDelay",
-
-    Callback = function(Value)
-        DashstabDelay = Value
     end,
 })
 TwoTimeTab:CreateLabel("Distance is how many studs behind killers")
