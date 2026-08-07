@@ -131,7 +131,7 @@ ChanceV2:CreateInput({
     end,
 })
 ChanceV2:CreateLabel("Should be 4 studs")
-local TwoTimeTab = Window:CreateTab("two time", "Sword")
+local TwoTimeTab = Window:CreateTab("Two Time", "Sword")
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -238,6 +238,7 @@ TwoTimeTab:CreateSlider({
         BackstabStuds = Value
     end,
 })
+TwoTimeTab:CreateLabel("You should use 2-3 studs")
 local ESPTab = Window:CreateTab("ESP", "eye")
 local KillerESPEnabled = false
 local KillerHighlight
@@ -277,14 +278,12 @@ local function UpdateKillerESP()
         end
     end
 
-    ApplyHighlight()
-
-    killersFolder.ChildAdded:Connect(function()
-        if KillerESPEnabled then
-            task.wait()
-            ApplyHighlight()
-        end
-    end)
+    task.spawn(function()
+    while KillerESPEnabled do
+        ApplyHighlight()
+        task.wait(0.2)
+    end
+end)
 end
 
 ESPTab:CreateToggle({
@@ -294,5 +293,62 @@ ESPTab:CreateToggle({
     Callback = function(Value)
         KillerESPEnabled = Value
         UpdateKillerESP()
+    end,
+})
+local SurvivorESPEnabled = false
+local SurvivorHighlights = {}
+
+local function ClearSurvivorESP()
+    for _, highlight in pairs(SurvivorHighlights) do
+        if highlight then
+            highlight:Destroy()
+        end
+    end
+    table.clear(SurvivorHighlights)
+end
+
+local function UpdateSurvivorESP()
+    ClearSurvivorESP()
+
+    if not SurvivorESPEnabled then
+        return
+    end
+
+    local survivorsFolder = workspace:WaitForChild("Players"):WaitForChild("Survivors")
+
+    local function ApplyHighlights()
+        ClearSurvivorESP()
+
+        for _, survivor in ipairs(survivorsFolder:GetChildren()) do
+            if survivor:IsA("Model") then
+                local highlight = Instance.new("Highlight")
+                highlight.Name = "SurvivorESP"
+                highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                highlight.FillTransparency = 0.5
+                highlight.OutlineTransparency = 0
+                highlight.Adornee = survivor
+                highlight.Parent = survivor
+
+                table.insert(SurvivorHighlights, highlight)
+            end
+        end
+    end
+
+    task.spawn(function()
+    while SurvivorESPEnabled do
+        ApplyHighlights()
+        task.wait(0.2)
+    end
+end)
+end
+
+ESPTab:CreateToggle({
+    Name = "Survivor",
+    CurrentValue = false,
+    Flag = "SurvivorESP",
+    Callback = function(Value)
+        SurvivorESPEnabled = Value
+        UpdateSurvivorESP()
     end,
 })
