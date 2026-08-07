@@ -138,16 +138,120 @@ local LocalPlayer = Players.LocalPlayer
 
 local BackstabEnabled = false
 local BackstabStuds = 2
+
+local DashstabEnabled = false
+local DashstabStuds = 2
+local DashstabDelay = 0
+local DashstabDuration = 1
+local DashstabLerpSpeed = 0.25
+
 local DaggerConnection
+local DashstabConnection
 
 local RunService = game:GetService("RunService")
+
+local BackstabToggle
+local DashstabToggle
 
 local function ConnectDaggerButton(button)
     if DaggerConnection then
         DaggerConnection:Disconnect()
+        DaggerConnection = nil
     end
 
     DaggerConnection = button.MouseButton1Click:Connect(function()
+
+        -- =========================
+        -- DASHSTAB
+        -- =========================
+        if DashstabEnabled then
+
+            local character = LocalPlayer.Character
+            if not character then
+                return
+            end
+
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                return
+            end
+
+            local killersFolder =
+                workspace:WaitForChild("Players"):WaitForChild("Killers")
+
+            local killer
+
+            for _, model in ipairs(killersFolder:GetChildren()) do
+                if model:IsA("Model") then
+                    killer = model
+                    break
+                end
+            end
+
+            if not killer then
+                return
+            end
+
+            local killerRoot =
+                killer:FindFirstChild("HumanoidRootPart")
+                or killer.PrimaryPart
+
+            if not killerRoot then
+                return
+            end
+
+            -- Wait 0.7 seconds after clicking Dagger
+            task.wait(DashstabDelay)
+
+            if not DashstabEnabled then
+                return
+            end
+
+            if not hrp.Parent or not killerRoot.Parent then
+                return
+            end
+
+            -- Follow behind the killer for 0.7 seconds
+            local startTime = tick()
+
+            if DashstabConnection then
+                DashstabConnection:Disconnect()
+                DashstabConnection = nil
+            end
+
+            DashstabConnection = RunService.RenderStepped:Connect(function()
+
+    if not DashstabEnabled
+        or tick() - startTime >= DashstabDuration
+        or not hrp.Parent
+        or not killerRoot.Parent then
+
+        DashstabConnection:Disconnect()
+        DashstabConnection = nil
+        return
+    end
+
+    -- 3 studs behind the killer
+    local behindPos =
+        killerRoot.Position
+        - killerRoot.CFrame.LookVector * DashstabStuds
+
+    -- Target position and rotation
+    local targetCFrame = CFrame.lookAt(
+        behindPos,
+        killerRoot.Position
+    )
+
+    -- Smoothly move toward the target
+    hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, DashstabLerpSpeed)
+end)
+
+return
+end
+
+        -- =========================
+        -- NORMAL BACKSTAB
+        -- =========================
         if not BackstabEnabled then
             return
         end
@@ -162,10 +266,11 @@ local function ConnectDaggerButton(button)
             return
         end
 
-        local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
+        local killersFolder =
+            workspace:WaitForChild("Players"):WaitForChild("Killers")
 
-        -- Find the first killer model
         local killer
+
         for _, model in ipairs(killersFolder:GetChildren()) do
             if model:IsA("Model") then
                 killer = model
@@ -177,7 +282,10 @@ local function ConnectDaggerButton(button)
             return
         end
 
-        local killerRoot = killer:FindFirstChild("HumanoidRootPart") or killer.PrimaryPart
+        local killerRoot =
+            killer:FindFirstChild("HumanoidRootPart")
+            or killer.PrimaryPart
+
         if not killerRoot then
             return
         end
@@ -185,7 +293,9 @@ local function ConnectDaggerButton(button)
         local startTime = tick()
 
         local connection
+
         connection = RunService.RenderStepped:Connect(function()
+
             if tick() - startTime >= 0.8 then
                 connection:Disconnect()
                 return
@@ -196,16 +306,22 @@ local function ConnectDaggerButton(button)
                 return
             end
 
-            -- Stay 2 studs behind the killer
-            local behindPos = killerRoot.Position - killerRoot.CFrame.LookVector * BackstabStuds
+            local behindPos =
+                killerRoot.Position
+                - killerRoot.CFrame.LookVector * BackstabStuds
 
-            hrp.CFrame = CFrame.lookAt(behindPos, killerRoot.Position)
+            hrp.CFrame = CFrame.lookAt(
+                behindPos,
+                killerRoot.Position
+            )
         end)
     end)
 end
 
 local function SearchForDagger()
-    local button = LocalPlayer.PlayerGui:FindFirstChild("Dagger", true)
+    local button =
+        LocalPlayer.PlayerGui:FindFirstChild("Dagger", true)
+
     if button and button:IsA("ImageButton") then
         ConnectDaggerButton(button)
     end
@@ -219,14 +335,25 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(obj)
     end
 end)
 
-TwoTimeTab:CreateToggle({
+-- =========================
+-- BACKSTAB TOGGLE
+-- =========================
+
+BackstabToggle = TwoTimeTab:CreateToggle({
     Name = "Backstab",
     CurrentValue = false,
     Flag = "BackstabToggle",
+
     Callback = function(Value)
         BackstabEnabled = Value
+
+        if Value then
+            DashstabEnabled = false
+            DashstabToggle:Set(false)
+        end
     end,
 })
+
 TwoTimeTab:CreateSlider({
     Name = "Studs",
     Range = {0, 5},
@@ -234,11 +361,68 @@ TwoTimeTab:CreateSlider({
     Suffix = "",
     CurrentValue = 2,
     Flag = "BackstabStuds",
+
     Callback = function(Value)
         BackstabStuds = Value
     end,
 })
+
 TwoTimeTab:CreateLabel("You should use 2-3 studs")
+
+-- =========================
+-- DASHSTAB TOGGLE
+-- =========================
+
+DashstabToggle = TwoTimeTab:CreateToggle({
+    Name = "Dashstab",
+    CurrentValue = false,
+    Flag = "DashstabToggle",
+
+    Callback = function(Value)
+        DashstabEnabled = Value
+
+        if Value then
+            BackstabEnabled = false
+            BackstabToggle:Set(false)
+        end
+    end,
+})
+TwoTimeTab:CreateSlider({
+    Name = "Dashstab Speed",
+    Range = {0, 1},
+    Increment = 0.05,
+    Suffix = "",
+    CurrentValue = 0.25,
+    Flag = "DashstabLerpSpeed",
+
+    Callback = function(Value)
+        DashstabLerpSpeed = Value
+    end,
+})
+TwoTimeTab:CreateSlider({
+    Name = "Duration",
+    Range = {0, 2},
+    Increment = 0.1,
+    Suffix = "s",
+    CurrentValue = 1,
+    Flag = "DashstabDuration",
+
+    Callback = function(Value)
+        DashstabDuration = Value
+    end,
+})
+TwoTimeTab:CreateSlider({
+    Name = "Distance",
+    Range = {0, 5},
+    Increment = 1,
+    Suffix = "studs",
+    CurrentValue = 2,
+    Flag = "DashstabStuds",
+
+    Callback = function(Value)
+        DashstabStuds = Value
+    end,
+})
 local ESPTab = Window:CreateTab("ESP", "eye")
 local KillerESPEnabled = false
 local KillerHighlight
