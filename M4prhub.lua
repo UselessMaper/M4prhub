@@ -423,7 +423,7 @@ TwoTimeTab:CreateSlider({
         DashstabStuds = Value
     end,
 })
-TwoTimeTab:CreateLabel("Distance is how many studs behind killers"
+TwoTimeTab:CreateLabel("Distance is how many studs behind killers")
 local ESPTab = Window:CreateTab("ESP", "eye")
 local KillerESPEnabled = false
 local KillerHighlight
