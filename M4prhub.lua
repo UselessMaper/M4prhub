@@ -393,7 +393,7 @@ TwoTimeTab:CreateSlider({
     Range = {0, 1},
     Increment = 0.05,
     Suffix = "",
-    CurrentValue = 0.1,
+    CurrentValue = 0.25,
     Flag = "DashstabLerpSpeed",
 
     Callback = function(Value)
@@ -417,7 +417,7 @@ TwoTimeTab:CreateSlider({
     Range = {0, 5},
     Increment = 1,
     Suffix = "studs",
-    CurrentValue = 2,
+    CurrentValue = 3,
     Flag = "DashstabStuds",
 
     Callback = function(Value)
