@@ -141,10 +141,10 @@ local BackstabEnabled = false
 local BackstabStuds = 2
 
 local DashstabEnabled = false
-local DashstabStuds = 2
-local DashstabDelay = 0
+local DashstabStuds = 3
+local DashstabDelay = 0.25
 local DashstabDuration = 1
-local DashstabLerpSpeed = 0.1
+local DashstabLerpSpeed = 0.25
 
 local DaggerConnection
 local DashstabConnection
@@ -422,6 +422,18 @@ TwoTimeTab:CreateSlider({
 
     Callback = function(Value)
         DashstabStuds = Value
+    end,
+})
+TwoTimeTab:CreateSlider({
+    Name = "Dashstab Delay",
+    Range = {0, 1},
+    Increment = 0.05,
+    Suffix = "s",
+    CurrentValue = 0.25,
+    Flag = "DashstabDelay",
+
+    Callback = function(Value)
+        DashstabDelay = Value
     end,
 })
 TwoTimeTab:CreateLabel("Distance is how many studs behind killers")
