@@ -132,7 +132,7 @@ ChanceV2:CreateInput({
 })
 ChanceV2:CreateLabel("Should be 4 studs")
 ChanceV2:CreateLabel("REMEMBER: WHEN AIMING, STAND STILL")
-local TwoTimeTab = Window:CreateTab("Two Time", "pocket-knife")
+local TwoTimeTab = Window:CreateTab("Two Time", "swords")
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -162,100 +162,94 @@ local function ConnectDaggerButton(button)
 
     DaggerConnection = button.MouseButton1Click:Connect(function()
 
-        -- =========================
-        -- DASHSTAB
-        -- =========================
-        if DashstabEnabled then
-
-            local character = LocalPlayer.Character
-            if not character then
-                return
-            end
-
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            if not hrp then
-                return
-            end
-
-            local killersFolder =
-                workspace:WaitForChild("Players"):WaitForChild("Killers")
-
-            local killer
-
-            for _, model in ipairs(killersFolder:GetChildren()) do
-                if model:IsA("Model") then
-                    killer = model
-                    break
-                end
-            end
-
-            if not killer then
-                return
-            end
-
-            local killerRoot =
-                killer:FindFirstChild("HumanoidRootPart")
-                or killer.PrimaryPart
-
-            if not killerRoot then
-                return
-            end
-
-            -- Wait 0.7 seconds after clicking Dagger
-            task.wait(DashstabDelay)
-
-            if not DashstabEnabled then
-                return
-            end
-
-            if not hrp.Parent or not killerRoot.Parent then
-                return
-            end
-
--- Start position when Dagger is clicked
-local startPosition = hrp.Position
-local startTime = tick()
-
-if DashstabConnection then
-    DashstabConnection:Disconnect()
-    DashstabConnection = nil
-end
-
-DashstabConnection = RunService.RenderStepped:Connect(function()
-
-    if not DashstabEnabled
-        or tick() - startTime >= DashstabDuration
-        or not hrp.Parent
-        or not killerRoot.Parent then
-
-        DashstabConnection:Disconnect()
-        DashstabConnection = nil
+-- =========================
+-- DASHSTAB
+-- =========================
+if DashstabEnabled then
+    local character = LocalPlayer.Character
+    if not character then
         return
     end
 
-    -- Target position behind the killer
-    local behindPos =
-        killerRoot.Position
-        - killerRoot.CFrame.LookVector * DashstabStuds
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        return
+    end
 
-    -- Linear movement toward the target
-    local alpha = math.clamp(
-        (tick() - startTime) / TweenTime,
-        0,
-        1
-    )
+    local killersFolder =
+        workspace:WaitForChild("Players"):WaitForChild("Killers")
 
-    local currentPosition =
-        startPosition:Lerp(behindPos, alpha)
+    -- Stop any previous Dashstab
+    if DashstabConnection then
+        DashstabConnection:Disconnect()
+        DashstabConnection = nil
+    end
 
-    -- Move while continuously looking at the killer
-    hrp.CFrame = CFrame.lookAt(
-        currentPosition,
-        killerRoot.Position
-    )
-end)
+    task.wait(DashstabDelay)
 
-return
+    if not DashstabEnabled or not hrp.Parent then
+        return
+    end
+
+    local startPosition = hrp.Position
+    local startTime = tick()
+
+    DashstabConnection = RunService.RenderStepped:Connect(function()
+        -- Stop exactly after DashstabDuration
+        if not DashstabEnabled
+            or tick() - startTime >= DashstabDuration
+            or not hrp.Parent then
+
+            DashstabConnection:Disconnect()
+            DashstabConnection = nil
+            return
+        end
+
+        -- Find a killer model
+        local killer
+
+        for _, model in ipairs(killersFolder:GetChildren()) do
+            if model:IsA("Model") then
+                killer = model
+                break
+            end
+        end
+
+        if not killer then
+            return
+        end
+
+        local killerRoot =
+            killer:FindFirstChild("HumanoidRootPart")
+            or killer.PrimaryPart
+
+        if not killerRoot then
+            return
+        end
+
+        -- Position behind the killer
+        local behindPos =
+            killerRoot.Position
+            - killerRoot.CFrame.LookVector * DashstabStuds
+
+        -- Dash from starting position toward behind the killer
+        local alpha = math.clamp(
+            (tick() - startTime) / TweenTime,
+            0,
+            1
+        )
+
+        local currentPosition =
+            startPosition:Lerp(behindPos, alpha)
+
+        -- Look at the killer
+        hrp.CFrame = CFrame.lookAt(
+            currentPosition,
+            killerRoot.Position
+        )
+    end)
+
+    return
 end
 
         -- =========================
@@ -376,7 +370,7 @@ TwoTimeTab:CreateSlider({
     end,
 })
 
-TwoTimeTab:CreateLabel("it's better 2-4 studs for backstab and dashstab")
+TwoTimeTab:CreateLabel("You should use 2-3 studs")
 
 -- =========================
 -- DASHSTAB TOGGLE
