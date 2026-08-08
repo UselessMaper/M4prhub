@@ -172,6 +172,7 @@ if DashstabEnabled then
     end
 
     local hrp = character:FindFirstChild("HumanoidRootPart")
+    local queryHitbox = character:FindFirstChild("QueryHitbox", true)
     if not hrp then
         return
     end
@@ -243,10 +244,16 @@ if DashstabEnabled then
             startPosition:Lerp(behindPos, alpha)
 
         -- Look at the killer
-        hrp.CFrame = CFrame.lookAt(
-            currentPosition,
-            killerRoot.Position
-        )
+        local currentCFrame = CFrame.lookAt(
+    currentPosition,
+    killerRoot.Position
+)
+
+hrp.CFrame = currentCFrame
+
+if queryHitbox and queryHitbox:IsA("BasePart") then
+    queryHitbox.CFrame = currentCFrame
+end
     end)
 
     return
