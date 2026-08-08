@@ -144,7 +144,7 @@ local DashstabEnabled = false
 local DashstabStuds = 2
 local DashstabDelay = 0
 local DashstabDuration = 1
-local TweenTime = 0.3
+local TweenTime = 0.25
 
 local DaggerConnection
 local DashstabConnection
@@ -399,9 +399,9 @@ DashstabToggle = TwoTimeTab:CreateToggle({
 TwoTimeTab:CreateSlider({
     Name = "Dashstab Speed",
     Range = {0, 1},
-    Increment = 0.1,
+    Increment = 0.05,
     Suffix = "s",
-    CurrentValue = 0.3,
+    CurrentValue = 0.25,
     Flag = "DashstabSpeed",
 
     Callback = function(Value)
