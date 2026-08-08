@@ -547,3 +547,127 @@ ESPTab:CreateToggle({
         UpdateSurvivorESP()
     end,
 })
+-- =========================
+-- GENERATOR ESP
+-- =========================
+
+local GeneratorESPEnabled = false
+local GeneratorHighlights = {}
+local GeneratorChildConnection
+local GeneratorScanThread
+
+local function ClearGeneratorESP()
+    for _, highlight in pairs(GeneratorHighlights) do
+        if highlight then
+            highlight:Destroy()
+        end
+    end
+
+    table.clear(GeneratorHighlights)
+end
+
+local function HighlightGenerator(generator)
+    if not GeneratorESPEnabled then
+        return
+    end
+
+    if not generator:IsA("Model") or generator.Name ~= "Generator" then
+        return
+    end
+
+    if generator:FindFirstChild("GeneratorESP") then
+        return
+    end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "GeneratorESP"
+    highlight.FillColor = Color3.fromRGB(0, 170, 255)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Adornee = generator
+    highlight.Parent = generator
+
+    table.insert(GeneratorHighlights, highlight)
+end
+
+local function ScanGenerators()
+    if not GeneratorESPEnabled then
+        return
+    end
+
+    local mapFolder = workspace:FindFirstChild("Map")
+    if not mapFolder then
+        return
+    end
+
+    local ingame = mapFolder:FindFirstChild("Ingame")
+    if not ingame then
+        return
+    end
+
+    local gameMap = ingame:FindFirstChild("Map")
+    if not gameMap then
+        return
+    end
+
+    -- Only check direct children
+    for _, child in ipairs(gameMap:GetChildren()) do
+        HighlightGenerator(child)
+    end
+end
+
+local function StartGeneratorESP()
+    -- Stop old connections/thread
+    if GeneratorChildConnection then
+        GeneratorChildConnection:Disconnect()
+        GeneratorChildConnection = nil
+    end
+
+    GeneratorESPEnabled = true
+    ClearGeneratorESP()
+
+    -- Detect new generators immediately
+    local mapFolder = workspace:FindFirstChild("Map")
+    local ingame = mapFolder and mapFolder:FindFirstChild("Ingame")
+    local gameMap = ingame and ingame:FindFirstChild("Map")
+
+    if gameMap then
+        GeneratorChildConnection = gameMap.ChildAdded:Connect(function(child)
+            HighlightGenerator(child)
+        end)
+    end
+
+    -- Continuous scanning
+    GeneratorScanThread = task.spawn(function()
+        while GeneratorESPEnabled do
+            ScanGenerators()
+            task.wait(0.5)
+        end
+    end)
+end
+
+local function StopGeneratorESP()
+    GeneratorESPEnabled = false
+
+    if GeneratorChildConnection then
+        GeneratorChildConnection:Disconnect()
+        GeneratorChildConnection = nil
+    end
+
+    ClearGeneratorESP()
+end
+
+ESPTab:CreateToggle({
+    Name = "Generator",
+    CurrentValue = false,
+    Flag = "GeneratorESP",
+
+    Callback = function(Value)
+        if Value then
+            StartGeneratorESP()
+        else
+            StopGeneratorESP()
+        end
+    end,
+})
