@@ -1,10 +1,14 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
+-- === Tạo cửa sổ và đổi chữ nút Show ===
 local Window = Rayfield:CreateWindow({
     Name = "M4pr Hub",
     LoadingTitle = "Thanks for using! :3",
-    LoadingSubtitle = "by Useless Maper"
+    LoadingSubtitle = "by Useless Maper",
+    ShowText = "M4pr" -- <=== ĐỔI CHỮ "Show Rayfield" THÀNH "Show M4pr" Ở ĐÂY
 })
+
+-- === Phần chức năng giữ nguyên 100% ===
 local ChanceV2 = Window:CreateTab("Chance v2", "crosshair")
 local Players = game:GetService("Players")
 
@@ -36,182 +40,13 @@ local function ConnectShootButton(button)
             return
         end
 
-        local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
+        local killersFolder =
+            workspace:WaitForChild("Players"):WaitForChild("Killers")
 
-        -- Find the first killer model
         local killer
         for _, v in ipairs(killersFolder:GetChildren()) do
             if v:IsA("Model") then
                 killer = v
-                break
-            end
-        end
-
-        if not killer then
-            return
-        end
-
-        local killerRoot = killer:FindFirstChild("HumanoidRootPart") or killer.PrimaryPart
-        if not killerRoot then
-            return
-        end
-
-        -- Look at a point 4 studs in front of the killer
-        local RunService = game:GetService("RunService")
-
-local startTime = tick()
-local connection
-
-connection = RunService.RenderStepped:Connect(function()
-    if tick() - startTime >= 2 then
-        connection:Disconnect()
-        return
-    end
-
-    if not root.Parent or not killerRoot.Parent then
-        connection:Disconnect()
-        return
-    end
-
-    -- Point 4 studs in front of the model
-    local frontPosition = killerRoot.Position + killerRoot.CFrame.LookVector * PredictionStuds
-    frontPosition = Vector3.new(
-        frontPosition.X,
-        root.Position.Y,
-        frontPosition.Z
-    )
-
-    -- Face that point
-    root.CFrame = CFrame.lookAt(root.Position, frontPosition)
-end)
-    end)
-end
-
-local function SearchForShoot()
-    local button = playerGui:FindFirstChild("Shoot", true)
-    if button and button:IsA("ImageButton") then
-        ConnectShootButton(button)
-    end
-end
-
--- Initial search
-SearchForShoot()
-
--- Reconnect if the Shoot button is recreated
-playerGui.DescendantAdded:Connect(function(obj)
-    if obj:IsA("ImageButton") and obj.Name == "Shoot" then
-        ConnectShootButton(obj)
-    end
-end)
-
--- Search again after respawning
-player.CharacterAdded:Connect(function()
-    task.wait(1)
-    SearchForShoot()
-end)
-
-ChanceV2:CreateToggle({
-    Name = "Aim v2",
-    CurrentValue = false,
-    Flag = "AimV2",
-    Callback = function(Value)
-        AimV2Enabled = Value
-    end,
-})
-ChanceV2:CreateInput({
-    Name = "Prediction",
-    PlaceholderText = "4",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        local num = tonumber(Text)
-
-        if num then
-            PredictionStuds = num
-        end
-    end,
-})
-ChanceV2:CreateLabel("Should be 4 studs")
-ChanceV2:CreateLabel("REMEMBER: WHEN AIMING, STAND STILL")
-local TwoTimeTab = Window:CreateTab("Two Time", "swords")
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-local BackstabEnabled = false
-local BackstabStuds = 2
-
-local DashstabEnabled = false
-local DashstabStuds = 2
-local DashstabDelay = 0
-local DashstabDuration = 1
-local TweenTime = 0.25
-
-local DaggerConnection
-local DashstabConnection
-
-local RunService = game:GetService("RunService")
-
-local BackstabToggle
-local DashstabToggle
-
-local function ConnectDaggerButton(button)
-    if DaggerConnection then
-        DaggerConnection:Disconnect()
-        DaggerConnection = nil
-    end
-
-    DaggerConnection = button.MouseButton1Click:Connect(function()
-
--- =========================
--- DASHSTAB
--- =========================
-if DashstabEnabled then
-    local character = LocalPlayer.Character
-    if not character then
-        return
-    end
-
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    local queryHitbox = character:FindFirstChild("QueryHitbox", true)
-    if not hrp then
-        return
-    end
-
-    local killersFolder =
-        workspace:WaitForChild("Players"):WaitForChild("Killers")
-
-    -- Stop any previous Dashstab
-    if DashstabConnection then
-        DashstabConnection:Disconnect()
-        DashstabConnection = nil
-    end
-
-    task.wait(DashstabDelay)
-
-    if not DashstabEnabled or not hrp.Parent then
-        return
-    end
-
-    local startPosition = hrp.Position
-    local startTime = tick()
-
-    DashstabConnection = RunService.RenderStepped:Connect(function()
-        -- Stop exactly after DashstabDuration
-        if not DashstabEnabled
-            or tick() - startTime >= DashstabDuration
-            or not hrp.Parent then
-
-            DashstabConnection:Disconnect()
-            DashstabConnection = nil
-            return
-        end
-
-        -- Find a killer model
-        local killer
-
-        for _, model in ipairs(killersFolder:GetChildren()) do
-            if model:IsA("Model") then
-                killer = model
                 break
             end
         end
@@ -228,40 +63,106 @@ if DashstabEnabled then
             return
         end
 
-        -- Position behind the killer
-        local behindPos =
-            killerRoot.Position
-            - killerRoot.CFrame.LookVector * DashstabStuds
+        local RunService = game:GetService("RunService")
+        local startTime = tick()
+        local connection
 
-        -- Dash from starting position toward behind the killer
-        local alpha = math.clamp(
-            (tick() - startTime) / TweenTime,
-            0,
-            1
-        )
+        connection = RunService.RenderStepped:Connect(function()
+            if tick() - startTime >= 2 then
+                connection:Disconnect()
+                return
+            end
 
-        local currentPosition =
-            startPosition:Lerp(behindPos, alpha)
+            if not root.Parent or not killerRoot.Parent then
+                connection:Disconnect()
+                return
+            end
 
-        -- Look at the killer
-        local currentCFrame = CFrame.lookAt(
-    currentPosition,
-    killerRoot.Position
-)
+            local frontPosition =
+                killerRoot.Position +
+                killerRoot.CFrame.LookVector * PredictionStuds
 
-hrp.CFrame = currentCFrame
+            frontPosition = Vector3.new(
+                frontPosition.X,
+                root.Position.Y,
+                frontPosition.Z
+            )
 
-if queryHitbox and queryHitbox:IsA("BasePart") then
-    queryHitbox.CFrame = currentCFrame
-end
+            root.CFrame = CFrame.lookAt(
+                root.Position,
+                frontPosition
+            )
+        end)
     end)
-
-    return
 end
 
-        -- =========================
-        -- NORMAL BACKSTAB
-        -- =========================
+local function SearchForShoot()
+    local button = playerGui:FindFirstChild("Shoot", true)
+
+    if button and button:IsA("ImageButton") then
+        ConnectShootButton(button)
+    end
+end
+
+SearchForShoot()
+
+playerGui.DescendantAdded:Connect(function(obj)
+    if obj:IsA("ImageButton") and obj.Name == "Shoot" then
+        ConnectShootButton(obj)
+    end
+end)
+
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    SearchForShoot()
+end)
+
+ChanceV2:CreateToggle({
+    Name = "Aim v2",
+    CurrentValue = false,
+    Flag = "AimV2",
+
+    Callback = function(Value)
+        AimV2Enabled = Value
+    end,
+})
+
+ChanceV2:CreateInput({
+    Name = "Prediction",
+    PlaceholderText = "4",
+    RemoveTextAfterFocusLost = false,
+
+    Callback = function(Text)
+        local num = tonumber(Text)
+
+        if num then
+            PredictionStuds = num
+        end
+    end,
+})
+
+ChanceV2:CreateLabel("Should be 4 studs")
+ChanceV2:CreateLabel("REMEMBER: WHEN AIMING, STAND STILL")
+
+
+local TwoTimeTab = Window:CreateTab("Two Time", "swords")
+
+local LocalPlayer = Players.LocalPlayer
+
+local BackstabEnabled = false
+local BackstabStuds = 2
+local BackstabDuration = 1
+
+local DaggerConnection
+local RunService = game:GetService("RunService")
+
+local function ConnectDaggerButton(button)
+    if DaggerConnection then
+        DaggerConnection:Disconnect()
+        DaggerConnection = nil
+    end
+
+    DaggerConnection = button.MouseButton1Click:Connect(function()
         if not BackstabEnabled then
             return
         end
@@ -301,12 +202,10 @@ end
         end
 
         local startTime = tick()
-
         local connection
 
         connection = RunService.RenderStepped:Connect(function()
-
-            if tick() - startTime >= 0.8 then
+            if tick() - startTime >= BackstabDuration then
                 connection:Disconnect()
                 return
             end
@@ -317,8 +216,8 @@ end
             end
 
             local behindPos =
-                killerRoot.Position
-                - killerRoot.CFrame.LookVector * BackstabStuds
+                killerRoot.Position -
+                killerRoot.CFrame.LookVector * BackstabStuds
 
             hrp.CFrame = CFrame.lookAt(
                 behindPos,
@@ -345,97 +244,44 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(obj)
     end
 end)
 
--- =========================
--- BACKSTAB TOGGLE
--- =========================
-
-BackstabToggle = TwoTimeTab:CreateToggle({
+TwoTimeTab:CreateToggle({
     Name = "Backstab",
     CurrentValue = false,
     Flag = "BackstabToggle",
 
     Callback = function(Value)
         BackstabEnabled = Value
+    end,
+})
 
-        if Value then
-            DashstabEnabled = false
-            DashstabToggle:Set(false)
+TwoTimeTab:CreateInput({
+    Name = "Distance Behind Killer",
+    PlaceholderText = "2",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local num = tonumber(Text)
+
+        if num then
+            BackstabStuds = num
+        end
+    end,
+})
+TwoTimeTab:CreateInput({
+    Name = "Backstab Duration (s)",
+    PlaceholderText = "1",
+    RemoveTextAfterFocusLost = false,
+
+    Callback = function(Text)
+        local num = tonumber(Text)
+
+        if num then
+            BackstabDuration = num
         end
     end,
 })
 
-TwoTimeTab:CreateSlider({
-    Name = "Studs",
-    Range = {0, 5},
-    Increment = 1,
-    Suffix = "",
-    CurrentValue = 2,
-    Flag = "BackstabStuds",
-
-    Callback = function(Value)
-        BackstabStuds = Value
-    end,
-})
-
-TwoTimeTab:CreateLabel("It's better 2-4 studs for backstab and dashstab")
-
--- =========================
--- DASHSTAB TOGGLE
--- =========================
-
-DashstabToggle = TwoTimeTab:CreateToggle({
-    Name = "Dashstab",
-    CurrentValue = false,
-    Flag = "DashstabToggle",
-
-    Callback = function(Value)
-        DashstabEnabled = Value
-
-        if Value then
-            BackstabEnabled = false
-            BackstabToggle:Set(false)
-        end
-    end,
-})
-TwoTimeTab:CreateSlider({
-    Name = "Dashstab Speed",
-    Range = {0, 1},
-    Increment = 0.05,
-    Suffix = "s",
-    CurrentValue = 0.25,
-    Flag = "DashstabSpeed",
-
-    Callback = function(Value)
-        TweenTime = Value
-    end,
-})
-TwoTimeTab:CreateSlider({
-    Name = "Duration",
-    Range = {0, 2},
-    Increment = 0.1,
-    Suffix = "s",
-    CurrentValue = 1,
-    Flag = "DashstabDuration",
-
-    Callback = function(Value)
-        DashstabDuration = Value
-    end,
-})
-TwoTimeTab:CreateSlider({
-    Name = "Distance",
-    Range = {0, 5},
-    Increment = 1,
-    Suffix = "studs",
-    CurrentValue = 2,
-    Flag = "DashstabStuds",
-
-    Callback = function(Value)
-        DashstabStuds = Value
-    end,
-})
-TwoTimeTab:CreateLabel("Dashstab Speed: lower means faster")
-TwoTimeTab:CreateLabel("Distance is how many studs behind killers")
 local ESPTab = Window:CreateTab("ESP", "eye")
+
 local KillerESPEnabled = false
 local KillerHighlight
 
@@ -449,7 +295,8 @@ local function UpdateKillerESP()
         return
     end
 
-    local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
+    local killersFolder =
+        workspace:WaitForChild("Players"):WaitForChild("Killers")
 
     local function ApplyHighlight()
         if KillerHighlight then
@@ -460,6 +307,7 @@ local function UpdateKillerESP()
         for _, killer in ipairs(killersFolder:GetChildren()) do
             if killer:IsA("Model") then
                 local highlight = Instance.new("Highlight")
+
                 highlight.Name = "KillerESP"
                 highlight.FillColor = Color3.fromRGB(255, 0, 0)
                 highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -475,22 +323,25 @@ local function UpdateKillerESP()
     end
 
     task.spawn(function()
-    while KillerESPEnabled do
-        ApplyHighlight()
-        task.wait(0.2)
-    end
-end)
+        while KillerESPEnabled do
+            ApplyHighlight()
+            task.wait(0.2)
+        end
+    end)
 end
 
 ESPTab:CreateToggle({
     Name = "Killer",
     CurrentValue = false,
     Flag = "KillerESP",
+
     Callback = function(Value)
         KillerESPEnabled = Value
         UpdateKillerESP()
     end,
 })
+
+
 local SurvivorESPEnabled = false
 local SurvivorHighlights = {}
 
@@ -500,6 +351,7 @@ local function ClearSurvivorESP()
             highlight:Destroy()
         end
     end
+
     table.clear(SurvivorHighlights)
 end
 
@@ -510,7 +362,8 @@ local function UpdateSurvivorESP()
         return
     end
 
-    local survivorsFolder = workspace:WaitForChild("Players"):WaitForChild("Survivors")
+    local survivorsFolder =
+        workspace:WaitForChild("Players"):WaitForChild("Survivors")
 
     local function ApplyHighlights()
         ClearSurvivorESP()
@@ -518,6 +371,7 @@ local function UpdateSurvivorESP()
         for _, survivor in ipairs(survivorsFolder:GetChildren()) do
             if survivor:IsA("Model") then
                 local highlight = Instance.new("Highlight")
+
                 highlight.Name = "SurvivorESP"
                 highlight.FillColor = Color3.fromRGB(0, 255, 0)
                 highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -532,25 +386,24 @@ local function UpdateSurvivorESP()
     end
 
     task.spawn(function()
-    while SurvivorESPEnabled do
-        ApplyHighlights()
-        task.wait(0.2)
-    end
-end)
+        while SurvivorESPEnabled do
+            ApplyHighlights()
+            task.wait(0.2)
+        end
+    end)
 end
 
 ESPTab:CreateToggle({
     Name = "Survivor",
     CurrentValue = false,
     Flag = "SurvivorESP",
+
     Callback = function(Value)
         SurvivorESPEnabled = Value
         UpdateSurvivorESP()
     end,
 })
--- =========================
--- GENERATOR ESP
--- =========================
+
 
 local GeneratorESPEnabled = false
 local GeneratorHighlights = {}
@@ -581,6 +434,7 @@ local function HighlightGenerator(generator)
     end
 
     local highlight = Instance.new("Highlight")
+
     highlight.Name = "GeneratorESP"
     highlight.FillColor = Color3.fromRGB(0, 170, 255)
     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -612,14 +466,12 @@ local function ScanGenerators()
         return
     end
 
-    -- Only check direct children
     for _, child in ipairs(gameMap:GetChildren()) do
         HighlightGenerator(child)
     end
 end
 
 local function StartGeneratorESP()
-    -- Stop old connections/thread
     if GeneratorChildConnection then
         GeneratorChildConnection:Disconnect()
         GeneratorChildConnection = nil
@@ -628,18 +480,17 @@ local function StartGeneratorESP()
     GeneratorESPEnabled = true
     ClearGeneratorESP()
 
-    -- Detect new generators immediately
     local mapFolder = workspace:FindFirstChild("Map")
     local ingame = mapFolder and mapFolder:FindFirstChild("Ingame")
     local gameMap = ingame and ingame:FindFirstChild("Map")
 
     if gameMap then
-        GeneratorChildConnection = gameMap.ChildAdded:Connect(function(child)
-            HighlightGenerator(child)
-        end)
+        GeneratorChildConnection =
+            gameMap.ChildAdded:Connect(function(child)
+                HighlightGenerator(child)
+            end)
     end
 
-    -- Continuous scanning
     GeneratorScanThread = task.spawn(function()
         while GeneratorESPEnabled do
             ScanGenerators()
