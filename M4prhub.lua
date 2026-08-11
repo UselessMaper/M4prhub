@@ -144,17 +144,151 @@ ChanceV2:CreateInput({
 ChanceV2:CreateLabel("Should be 4 studs")
 ChanceV2:CreateLabel("REMEMBER: WHEN AIMING, STAND STILL")
 
+-- =========================
+-- TWO TIME
+-- =========================
 
 local TwoTimeTab = Window:CreateTab("Two Time", "swords")
 
-local LocalPlayer = Players.LocalPlayer
-
 local BackstabEnabled = false
-local BackstabStuds = 2
+local BackstabDistance = 2
 local BackstabDuration = 1
 
-local DaggerConnection
 local RunService = game:GetService("RunService")
+local DaggerConnection
+local BackstabConnection
+
+local function StopBackstab()
+    if BackstabConnection then
+        BackstabConnection:Disconnect()
+        BackstabConnection = nil
+    end
+
+    local character = player.Character
+    if not character then
+        return
+    end
+
+    local temporaryPart = character:FindFirstChild("BackstabPrimaryPart")
+
+    if temporaryPart then
+        temporaryPart:Destroy()
+    end
+
+    -- Restore the real character PrimaryPart
+    local humanoidRootPart =
+        character:FindFirstChild("HumanoidRootPart")
+
+    if humanoidRootPart then
+        character.PrimaryPart = humanoidRootPart
+    end
+end
+
+local function DoBackstab()
+    if not BackstabEnabled then
+        return
+    end
+
+    StopBackstab()
+
+    local character = player.Character
+    if not character then
+        return
+    end
+
+    local originalPrimaryPart = character.PrimaryPart
+    if not originalPrimaryPart then
+        return
+    end
+
+    local playersFolder = workspace:FindFirstChild("Players")
+    if not playersFolder then
+        return
+    end
+
+    local killersFolder = playersFolder:FindFirstChild("Killers")
+    if not killersFolder then
+        return
+    end
+
+    local killer
+
+    for _, model in ipairs(killersFolder:GetChildren()) do
+        if model:IsA("Model") then
+            killer = model
+            break
+        end
+    end
+
+    if not killer then
+        return
+    end
+
+    local killerRoot =
+        killer:FindFirstChild("HumanoidRootPart")
+        or killer.PrimaryPart
+
+    if not killerRoot then
+        return
+    end
+
+    -- Create YOUR temporary PrimaryPart
+    local backstabPart = Instance.new("Part")
+    backstabPart.Name = "BackstabPrimaryPart"
+    backstabPart.Size = Vector3.new(1, 1, 1)
+    backstabPart.Transparency = 1
+    backstabPart.Anchored = true
+    backstabPart.CanCollide = false
+    backstabPart.CanTouch = false
+    backstabPart.CanQuery = false
+
+    -- Start behind the Killer
+    backstabPart.CFrame =
+        killerRoot.CFrame
+        - killerRoot.CFrame.LookVector * BackstabDistance
+
+    backstabPart.Parent = character
+
+    -- Make the NEW PART your PrimaryPart
+    character.PrimaryPart = backstabPart
+
+    local startTime = tick()
+
+    BackstabConnection = RunService.RenderStepped:Connect(function()
+        if not BackstabEnabled
+            or not character.Parent
+            or not backstabPart.Parent
+            or not killer.Parent
+            or not killerRoot.Parent
+            or tick() - startTime >= BackstabDuration then
+
+            if BackstabConnection then
+                BackstabConnection:Disconnect()
+                BackstabConnection = nil
+            end
+
+            if backstabPart and backstabPart.Parent then
+                backstabPart:Destroy()
+            end
+
+            -- Restore original PrimaryPart
+            if character.Parent
+                and originalPrimaryPart
+                and originalPrimaryPart.Parent then
+
+                character.PrimaryPart = originalPrimaryPart
+            end
+
+            return
+        end
+
+        -- Continuously move ONLY the temporary PrimaryPart
+        -- behind the Killer.
+        backstabPart.CFrame =
+            killerRoot.CFrame
+            - killerRoot.CFrame.LookVector * BackstabDistance
+    end)
+end
 
 local function ConnectDaggerButton(button)
     if DaggerConnection then
@@ -163,73 +297,14 @@ local function ConnectDaggerButton(button)
     end
 
     DaggerConnection = button.MouseButton1Click:Connect(function()
-        if not BackstabEnabled then
-            return
+        if BackstabEnabled then
+            DoBackstab()
         end
-
-        local character = LocalPlayer.Character
-        if not character then
-            return
-        end
-
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        if not hrp then
-            return
-        end
-
-        local killersFolder =
-            workspace:WaitForChild("Players"):WaitForChild("Killers")
-
-        local killer
-
-        for _, model in ipairs(killersFolder:GetChildren()) do
-            if model:IsA("Model") then
-                killer = model
-                break
-            end
-        end
-
-        if not killer then
-            return
-        end
-
-        local killerRoot =
-            killer:FindFirstChild("HumanoidRootPart")
-            or killer.PrimaryPart
-
-        if not killerRoot then
-            return
-        end
-
-        local startTime = tick()
-        local connection
-
-        connection = RunService.RenderStepped:Connect(function()
-            if tick() - startTime >= BackstabDuration then
-                connection:Disconnect()
-                return
-            end
-
-            if not hrp.Parent or not killerRoot.Parent then
-                connection:Disconnect()
-                return
-            end
-
-            local behindPos =
-                killerRoot.Position -
-                killerRoot.CFrame.LookVector * BackstabStuds
-
-            hrp.CFrame = CFrame.lookAt(
-                behindPos,
-                killerRoot.Position
-            )
-        end)
     end)
 end
 
 local function SearchForDagger()
-    local button =
-        LocalPlayer.PlayerGui:FindFirstChild("Dagger", true)
+    local button = playerGui:FindFirstChild("Dagger", true)
 
     if button and button:IsA("ImageButton") then
         ConnectDaggerButton(button)
@@ -238,10 +313,15 @@ end
 
 SearchForDagger()
 
-LocalPlayer.PlayerGui.DescendantAdded:Connect(function(obj)
+playerGui.DescendantAdded:Connect(function(obj)
     if obj:IsA("ImageButton") and obj.Name == "Dagger" then
         ConnectDaggerButton(obj)
     end
+end)
+
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    SearchForDagger()
 end)
 
 TwoTimeTab:CreateToggle({
@@ -251,6 +331,10 @@ TwoTimeTab:CreateToggle({
 
     Callback = function(Value)
         BackstabEnabled = Value
+
+        if not Value then
+            StopBackstab()
+        end
     end,
 })
 
@@ -258,14 +342,16 @@ TwoTimeTab:CreateInput({
     Name = "Distance Behind Killer",
     PlaceholderText = "2",
     RemoveTextAfterFocusLost = false,
+
     Callback = function(Text)
         local num = tonumber(Text)
 
         if num then
-            BackstabStuds = num
+            BackstabDistance = num
         end
     end,
 })
+
 TwoTimeTab:CreateInput({
     Name = "Backstab Duration (s)",
     PlaceholderText = "1",
@@ -274,9 +360,158 @@ TwoTimeTab:CreateInput({
     Callback = function(Text)
         local num = tonumber(Text)
 
-        if num then
+        if num and num > 0 then
             BackstabDuration = num
         end
+    end,
+})
+
+local KillerTab = Window:CreateTab("Killer", "skull")
+
+local M1AimEnabled = false
+
+local M1Buttons = {
+    ["Slash"] = true,
+    ["Stab"] = true,
+    ["Carving Slash"] = true,
+    ["Punch"] = true,
+}
+
+local M1ButtonConnections = {}
+
+local function GetNearestPlayer()
+    local character = LocalPlayer.Character
+    if not character then
+        return nil
+    end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return nil
+    end
+
+    local nearestPlayer = nil
+    local nearestDistance = math.huge
+
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= LocalPlayer then
+            local targetCharacter = targetPlayer.Character
+
+            if targetCharacter then
+                local targetRoot =
+                    targetCharacter:FindFirstChild("HumanoidRootPart")
+
+                if targetRoot then
+                    local distance =
+                        (root.Position - targetRoot.Position).Magnitude
+
+                    if distance < nearestDistance then
+                        nearestDistance = distance
+                        nearestPlayer = targetPlayer
+                    end
+                end
+            end
+        end
+    end
+
+    return nearestPlayer
+end
+
+local function DoM1Aim()
+    if not M1AimEnabled then
+        return
+    end
+
+    local character = LocalPlayer.Character
+    if not character then
+        return
+    end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return
+    end
+
+    local targetPlayer = GetNearestPlayer()
+    if not targetPlayer then
+        return
+    end
+
+    local targetCharacter = targetPlayer.Character
+    if not targetCharacter then
+        return
+    end
+
+    local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then
+        return
+    end
+
+    local startTime = tick()
+
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if tick() - startTime >= 1 then
+            connection:Disconnect()
+            return
+        end
+
+        if not root.Parent or not targetRoot.Parent then
+            connection:Disconnect()
+            return
+        end
+
+        -- Don't move; only rotate toward the target
+        local lookPosition = targetRoot.Position + 
+            targetRoot.CFrame.LookVector * 4
+
+        lookPosition = Vector3.new(
+            lookPosition.X,
+            root.Position.Y,
+            lookPosition.Z
+        )
+
+        root.CFrame = CFrame.lookAt(
+            root.Position,
+            lookPosition
+        )
+    end)
+end
+
+local function ConnectM1Button(button)
+    if M1ButtonConnections[button] then
+        M1ButtonConnections[button]:Disconnect()
+    end
+
+    M1ButtonConnections[button] =
+        button.MouseButton1Click:Connect(function()
+            DoM1Aim()
+        end)
+end
+
+local function ScanM1Buttons()
+    for _, obj in ipairs(playerGui:GetDescendants()) do
+        if obj:IsA("ImageButton") and M1Buttons[obj.Name] then
+            ConnectM1Button(obj)
+        end
+    end
+end
+
+ScanM1Buttons()
+
+playerGui.DescendantAdded:Connect(function(obj)
+    if obj:IsA("ImageButton") and M1Buttons[obj.Name] then
+        ConnectM1Button(obj)
+    end
+end)
+
+KillerTab:CreateToggle({
+    Name = "M1 Aim",
+    CurrentValue = false,
+    Flag = "M1Aim",
+
+    Callback = function(Value)
+        M1AimEnabled = Value
     end,
 })
 
@@ -521,5 +756,46 @@ ESPTab:CreateToggle({
         else
             StopGeneratorESP()
         end
+    end,
+})
+-- =========================
+-- CREDITS
+-- =========================
+
+local CreditsTab = Window:CreateTab("Credits", "user")
+
+CreditsTab:CreateParagraph({
+    Title = "Owner",
+    Content = "Useless Maper"
+})
+
+CreditsTab:CreateParagraph({
+    Title = "Script Helper",
+    Content = "RFS Discord"
+})
+
+CreditsTab:CreateParagraph({
+    Title = "Idea Used",
+    Content = "RFS Discord, Schmackrr"
+})
+
+CreditsTab:CreateParagraph({
+    Title = "Thanks To",
+    Content = "Thanks RFS for helping me!"
+})
+
+local DiscordTab = Window:CreateTab("Discord", "message-circle")
+
+DiscordTab:CreateButton({
+    Name = "RFS Discord",
+    Callback = function()
+        setclipboard("https://discord.gg/WcSKXjGtc")
+    end,
+})
+
+DiscordTab:CreateButton({
+    Name = "Schmackrr Discord",
+    Callback = function()
+        setclipboard("https://discord.gg/9GMmxPAAP")
     end,
 })
