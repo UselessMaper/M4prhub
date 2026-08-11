@@ -380,7 +380,7 @@ local M1Buttons = {
 local M1ButtonConnections = {}
 
 local function GetNearestPlayer()
-    local character = LocalPlayer.Character
+    local character = player.Character
     if not character then
         return nil
     end
@@ -394,7 +394,7 @@ local function GetNearestPlayer()
     local nearestDistance = math.huge
 
     for _, targetPlayer in ipairs(Players:GetPlayers()) do
-        if targetPlayer ~= LocalPlayer then
+        if targetPlayer ~= player then
             local targetCharacter = targetPlayer.Character
 
             if targetCharacter then
@@ -422,7 +422,7 @@ local function DoM1Aim()
         return
     end
 
-    local character = LocalPlayer.Character
+    local character = player.Character
     if not character then
         return
     end
@@ -442,7 +442,9 @@ local function DoM1Aim()
         return
     end
 
-    local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
+    local targetRoot =
+        targetCharacter:FindFirstChild("HumanoidRootPart")
+
     if not targetRoot then
         return
     end
@@ -451,6 +453,11 @@ local function DoM1Aim()
 
     local connection
     connection = RunService.RenderStepped:Connect(function()
+        if not M1AimEnabled then
+            connection:Disconnect()
+            return
+        end
+
         if tick() - startTime >= 1 then
             connection:Disconnect()
             return
@@ -461,16 +468,19 @@ local function DoM1Aim()
             return
         end
 
-        -- Don't move; only rotate toward the target
-        local lookPosition = targetRoot.Position + 
+        -- Aim 4 studs in front of the target
+        local lookPosition =
+            targetRoot.Position +
             targetRoot.CFrame.LookVector * 4
 
+        -- Keep the player's Y position unchanged
         lookPosition = Vector3.new(
             lookPosition.X,
             root.Position.Y,
             lookPosition.Z
         )
 
+        -- Rotate only, don't move
         root.CFrame = CFrame.lookAt(
             root.Position,
             lookPosition
@@ -489,9 +499,16 @@ local function ConnectM1Button(button)
         end)
 end
 
+local function IsM1Button(obj)
+    return (
+        (obj:IsA("ImageButton") or obj:IsA("TextButton"))
+        and M1Buttons[obj.Name] == true
+    )
+end
+
 local function ScanM1Buttons()
     for _, obj in ipairs(playerGui:GetDescendants()) do
-        if obj:IsA("ImageButton") and M1Buttons[obj.Name] then
+        if IsM1Button(obj) then
             ConnectM1Button(obj)
         end
     end
@@ -500,7 +517,7 @@ end
 ScanM1Buttons()
 
 playerGui.DescendantAdded:Connect(function(obj)
-    if obj:IsA("ImageButton") and M1Buttons[obj.Name] then
+    if IsM1Button(obj) then
         ConnectM1Button(obj)
     end
 end)
