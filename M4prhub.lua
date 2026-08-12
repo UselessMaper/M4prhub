@@ -152,11 +152,12 @@ local TwoTimeTab = Window:CreateTab("Two Time", "swords")
 
 local BackstabEnabled = false
 local BackstabDistance = 2
-local BackstabDuration = 1
+local BackstabDuration = 0.5
 
 local RunService = game:GetService("RunService")
 local DaggerConnection
 local BackstabConnection
+local CameraConnection
 
 local function StopBackstab()
     if BackstabConnection then
@@ -164,18 +165,38 @@ local function StopBackstab()
         BackstabConnection = nil
     end
 
+    if CameraConnection then
+        CameraConnection:Disconnect()
+        CameraConnection = nil
+    end
+
+    local camera = workspace.CurrentCamera
+
+    if camera then
+        camera.CameraType = Enum.CameraType.Custom
+
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+            if humanoid then
+                camera.CameraSubject = humanoid
+            end
+        end
+    end
+
     local character = player.Character
     if not character then
         return
     end
 
-    local temporaryPart = character:FindFirstChild("BackstabPrimaryPart")
+    local temporaryPart =
+        character:FindFirstChild("BackstabPrimaryPart")
 
     if temporaryPart then
         temporaryPart:Destroy()
     end
 
-    -- Restore the real character PrimaryPart
     local humanoidRootPart =
         character:FindFirstChild("HumanoidRootPart")
 
@@ -232,8 +253,8 @@ local function DoBackstab()
         return
     end
 
-    -- Create YOUR temporary PrimaryPart
     local backstabPart = Instance.new("Part")
+
     backstabPart.Name = "BackstabPrimaryPart"
     backstabPart.Size = Vector3.new(1, 1, 1)
     backstabPart.Transparency = 1
@@ -242,26 +263,36 @@ local function DoBackstab()
     backstabPart.CanTouch = false
     backstabPart.CanQuery = false
 
-    -- Start behind the Killer
     backstabPart.CFrame =
         killerRoot.CFrame
         - killerRoot.CFrame.LookVector * BackstabDistance
 
     backstabPart.Parent = character
-
-    -- Make the NEW PART your PrimaryPart
     character.PrimaryPart = backstabPart
+
+    local camera = workspace.CurrentCamera
+
+    if not camera then
+        backstabPart:Destroy()
+        character.PrimaryPart = originalPrimaryPart
+        return
+    end
+
+    local oldCameraType = camera.CameraType
+    local oldCameraSubject = camera.CameraSubject
 
     local startTime = tick()
 
     BackstabConnection = RunService.RenderStepped:Connect(function()
-        if not BackstabEnabled
+        local finished =
+            not BackstabEnabled
             or not character.Parent
             or not backstabPart.Parent
             or not killer.Parent
             or not killerRoot.Parent
-            or tick() - startTime >= BackstabDuration then
+            or tick() - startTime >= BackstabDuration
 
+        if finished then
             if BackstabConnection then
                 BackstabConnection:Disconnect()
                 BackstabConnection = nil
@@ -271,7 +302,6 @@ local function DoBackstab()
                 backstabPart:Destroy()
             end
 
-            -- Restore original PrimaryPart
             if character.Parent
                 and originalPrimaryPart
                 and originalPrimaryPart.Parent then
@@ -279,14 +309,26 @@ local function DoBackstab()
                 character.PrimaryPart = originalPrimaryPart
             end
 
+            if camera and camera.Parent then
+                camera.CameraType = oldCameraType
+                camera.CameraSubject = oldCameraSubject
+            end
+
             return
         end
 
-        -- Continuously move ONLY the temporary PrimaryPart
-        -- behind the Killer.
+        -- Keep player behind killer
         backstabPart.CFrame =
             killerRoot.CFrame
             - killerRoot.CFrame.LookVector * BackstabDistance
+
+        -- Only rotate camera; NEVER move its position
+        local cameraPosition = camera.CFrame.Position
+
+        camera.CFrame = CFrame.lookAt(
+            cameraPosition,
+            killerRoot.Position
+        )
     end)
 end
 
@@ -296,15 +338,17 @@ local function ConnectDaggerButton(button)
         DaggerConnection = nil
     end
 
-    DaggerConnection = button.MouseButton1Click:Connect(function()
-        if BackstabEnabled then
-            DoBackstab()
-        end
-    end)
+    DaggerConnection =
+        button.MouseButton1Click:Connect(function()
+            if BackstabEnabled then
+                DoBackstab()
+            end
+        end)
 end
 
 local function SearchForDagger()
-    local button = playerGui:FindFirstChild("Dagger", true)
+    local button =
+        playerGui:FindFirstChild("Dagger", true)
 
     if button and button:IsA("ImageButton") then
         ConnectDaggerButton(button)
@@ -314,7 +358,9 @@ end
 SearchForDagger()
 
 playerGui.DescendantAdded:Connect(function(obj)
-    if obj:IsA("ImageButton") and obj.Name == "Dagger" then
+    if obj:IsA("ImageButton")
+        and obj.Name == "Dagger" then
+
         ConnectDaggerButton(obj)
     end
 end)
@@ -354,7 +400,7 @@ TwoTimeTab:CreateInput({
 
 TwoTimeTab:CreateInput({
     Name = "Backstab Duration (s)",
-    PlaceholderText = "1",
+    PlaceholderText = "0.5",
     RemoveTextAfterFocusLost = false,
 
     Callback = function(Text)
@@ -473,14 +519,14 @@ local function DoM1Aim()
             targetRoot.Position +
             targetRoot.CFrame.LookVector * 4
 
-        -- Keep the player's Y position unchanged
+        -- Keep player's position unchanged
         lookPosition = Vector3.new(
             lookPosition.X,
             root.Position.Y,
             lookPosition.Z
         )
 
-        -- Rotate only, don't move
+        -- Rotate character only
         root.CFrame = CFrame.lookAt(
             root.Position,
             lookPosition
@@ -529,6 +575,148 @@ KillerTab:CreateToggle({
 
     Callback = function(Value)
         M1AimEnabled = Value
+    end,
+})
+
+-- =========================
+-- M1 HITBOX EXPANDER
+-- =========================
+
+local M1HitboxExpanderEnabled = false
+local M1HitboxRange = 4
+
+local M1HitboxButtons = {
+    ["Slash"] = true,
+    ["Stab"] = true,
+    ["Carving Slash"] = true,
+    ["Punch"] = true,
+}
+
+local M1HitboxConnections = {}
+
+local function CreateM1Hitbox()
+    if not M1HitboxExpanderEnabled then
+        return
+    end
+
+    local character = player.Character
+    if not character then
+        return
+    end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return
+    end
+
+    local oldPrimaryPart = character.PrimaryPart
+
+    local hitbox = Instance.new("Part")
+    hitbox.Name = "M1HitboxExpander"
+    hitbox.Size = Vector3.new(4, 4, 4)
+    hitbox.Transparency = 1
+    hitbox.Anchored = true
+    hitbox.CanCollide = false
+    hitbox.CanTouch = true
+    hitbox.CanQuery = true
+
+    hitbox.CFrame =
+        root.CFrame + root.CFrame.LookVector * M1HitboxRange
+
+    hitbox.Parent = character
+
+    character.PrimaryPart = hitbox
+
+    local startTime = tick()
+    local connection
+
+    connection = RunService.RenderStepped:Connect(function()
+        if not M1HitboxExpanderEnabled
+            or not character.Parent
+            or not root.Parent
+            or not hitbox.Parent
+            or tick() - startTime >= 1 then
+
+            connection:Disconnect()
+
+            if character.Parent
+                and oldPrimaryPart
+                and oldPrimaryPart.Parent then
+
+                character.PrimaryPart = oldPrimaryPart
+            end
+
+            if hitbox.Parent then
+                hitbox:Destroy()
+            end
+
+            return
+        end
+
+        -- Continuously keep hitbox at the selected range
+        hitbox.CFrame =
+            root.CFrame + root.CFrame.LookVector * M1HitboxRange
+    end)
+end
+
+local function ConnectM1HitboxButton(button)
+    if M1HitboxConnections[button] then
+        M1HitboxConnections[button]:Disconnect()
+    end
+
+    M1HitboxConnections[button] =
+        button.MouseButton1Click:Connect(function()
+            CreateM1Hitbox()
+        end)
+end
+
+local function IsM1HitboxButton(obj)
+    return (
+        obj:IsA("ImageButton")
+        and M1HitboxButtons[obj.Name] == true
+    )
+end
+
+local function ScanM1HitboxButtons()
+    for _, obj in ipairs(playerGui:GetDescendants()) do
+        if IsM1HitboxButton(obj) then
+            ConnectM1HitboxButton(obj)
+        end
+    end
+end
+
+ScanM1HitboxButtons()
+
+playerGui.DescendantAdded:Connect(function(obj)
+    if IsM1HitboxButton(obj) then
+        ConnectM1HitboxButton(obj)
+    end
+end)
+
+-- Range input
+KillerTab:CreateToggle({
+    Name = "M1 Hitbox Expander",
+    CurrentValue = false,
+    Flag = "M1HitboxExpander",
+
+    Callback = function(Value)
+        M1HitboxExpanderEnabled = Value
+    end,
+})
+
+KillerTab:CreateInput({
+    Name = "Range",
+    CurrentValue = "4",
+    PlaceholderText = "4",
+    RemoveTextAfterFocusLost = false,
+    Flag = "M1HitboxRange",
+
+    Callback = function(Value)
+        local range = tonumber(Value)
+
+        if range then
+            M1HitboxRange = math.max(0, range)
+        end
     end,
 })
 
@@ -815,4 +1003,36 @@ DiscordTab:CreateButton({
     Callback = function()
         setclipboard("https://discord.gg/9GMmxPAAP")
     end,
+})
+
+local PlayerTab = Window:CreateTab("Player", "person-standing")
+
+local Sprinting = require(
+    game:GetService("ReplicatedStorage")
+        .Systems
+        .Character
+        .Game
+        .Sprinting
+)
+
+-- Save the original value before changing anything
+local OriginalMaxStamina = Sprinting.DefaultConfig.MaxStamina
+
+PlayerTab:CreateToggle({
+    Name = "Infinite Stamina",
+    CurrentValue = false,
+    Flag = "InfiniteStamina",
+
+    Callback = function(Value)
+        if Value then
+            Sprinting.DefaultConfig.MaxStamina = math.huge
+        else
+            Sprinting.DefaultConfig.MaxStamina = OriginalMaxStamina
+        end
+    end,
+})
+
+PlayerTab:CreateParagraph({
+    Title = "Helper Guy",
+    Content = "Enable before game start"
 })
