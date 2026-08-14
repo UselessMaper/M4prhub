@@ -1,14 +1,12 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
--- === Tạo cửa sổ và đổi chữ nút Show ===
 local Window = Rayfield:CreateWindow({
     Name = "M4pr Hub",
     LoadingTitle = "Thanks for using! :3",
     LoadingSubtitle = "by Useless Maper",
-    ShowText = "M4pr" -- <=== ĐỔI CHỮ "Show Rayfield" THÀNH "Show M4pr" Ở ĐÂY
+    ShowText = "M4pr"
 })
 
--- === Phần chức năng giữ nguyên 100% ===
 local ChanceV2 = Window:CreateTab("Chance v2", "crosshair")
 local Players = game:GetService("Players")
 
