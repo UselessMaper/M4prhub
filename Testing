@@ -1,0 +1,156 @@
+local WindUI = loadstring(game:HttpGet(
+    "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
+))()
+
+local Window = WindUI:CreateWindow({
+    Title = "M4pr Hub",
+
+    Size = UDim2.fromOffset(580, 460),
+
+    Transparent = false,
+    Theme = "Dark",
+    Resizable = true,
+
+    SideBarWidth = 200,
+    HideSearchBar = false,
+    ScrollBarEnabled = true,
+})
+
+--// Load the 4 tab scripts FIRST
+local urls = {
+    "https://pastefy.app/wKf0yGlA/raw", -- Chance
+    "https://pastefy.app/Lo9r8NYz/raw", -- Guest1337
+    "https://pastefy.app/PP5vNKFk/raw", -- ESP
+    "https://pastefy.app/tfsMD3ff/raw", -- Player
+}
+
+local source = {}
+local done = 0
+
+-- Download simultaneously
+for i, url in ipairs(urls) do
+    task.spawn(function()
+        local ok, result = pcall(function()
+            return game:HttpGet(url)
+        end)
+
+        if ok then
+            source[i] = result
+        end
+
+        done += 1
+    end)
+end
+
+while done < #urls do
+    task.wait()
+end
+
+for i = 1, #urls do
+    if source[i] then
+        local fn = loadstring(source[i])
+
+        if fn then
+            pcall(fn)
+        end
+    end
+end
+
+--// Discord
+DiscordTab = Window:Tab({
+    Title = "Discord",
+})
+
+DiscordTab:Button({
+    Title = "RFS Hub",
+    Callback = function()
+        setclipboard("https://discord.gg/bpH8z5cPX")
+    end,
+})
+
+DiscordTab:Button({
+    Title = "Schmakrr",
+    Callback = function()
+        setclipboard("https://discord.gg/TnpkVQZc7")
+    end,
+})
+
+--// Credits
+CreditsTab = Window:Tab({
+    Title = "Credits",
+})
+
+CreditsTab:Paragraph({
+    Title = "Made by",
+    Desc = "Maper and AI",
+})
+
+CreditsTab:Paragraph({
+    Title = "Thanks To",
+    Desc = "Thanks RFS for helping me!",
+})
+
+--// Settings
+SettingsTab = Window:Tab({
+    Title = "Settings",
+})
+
+SettingsTab:Section({
+    Title = "Interface",
+})
+
+SettingsTab:Keybind({
+    Title = "UI Toggle Key",
+    Value = "RightShift",
+    Callback = function(value)
+        Window:SetToggleKey(Enum.KeyCode[value])
+    end,
+})
+
+SettingsTab:Dropdown({
+    Title = "Theme",
+    Values = {
+        "Dark",
+        "Light",
+    },
+    Value = "Dark",
+    Callback = function(value)
+        WindUI:SetTheme(value)
+    end,
+})
+
+SettingsTab:Toggle({
+    Title = "Panel Background",
+    Value = true,
+    Callback = function(value)
+        Window:SetPanelBackground(value)
+    end,
+})
+
+SettingsTab:Section({
+    Title = "Notifications",
+})
+
+SettingsTab:Button({
+    Title = "Test Notification",
+    Justify = "Center",
+    Callback = function()
+        WindUI:Notify({
+            Title = "Maper",
+            Content = "Notification test.",
+            Duration = 3,
+        })
+    end,
+})
+
+SettingsTab:Section({
+    Title = "Window",
+})
+
+SettingsTab:Button({
+    Title = "Destroy UI",
+    Justify = "Center",
+    Callback = function()
+        Window:Destroy()
+    end,
+})
